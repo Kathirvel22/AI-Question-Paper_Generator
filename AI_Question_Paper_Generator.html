@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Question Paper Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---------- Tokens ---------- */
+:root{
+  --paper:      #f7f5ef;
+  --panel:      #ffffff;
+  --line:       #ddd7c8;
+  --ink:        #1c2033;
+  --ink-soft:   #565c73;
+  --brass:      #a9793f;
+  --brass-dark: #7c5a2f;
+  --stamp:      #7a2e2e;
+  --stamp-bg:   #f6e9e9;
+  --radius:     3px;
+  --serif:      "Source Serif 4", Georgia, serif;
+  --sans:       "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  margin:0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  border-bottom: 1px solid var(--line);
+  padding: 22px 32px;
+  background: var(--paper);
+}
+.brand{ display:flex; align-items:center; gap:14px; max-width:1180px; margin:0 auto; }
+.brand-mark{
+  font-family: var(--serif);
+  font-weight:700;
+  font-size: 26px;
+  width:44px; height:44px;
+  border-radius:50%;
+  border:1.5px solid var(--brass);
+  color: var(--brass-dark);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.brand-text h1{
+  font-family: var(--serif);
+  font-size: 21px;
+  margin:0;
+  font-weight:600;
+  letter-spacing: 0.2px;
+}
+.brand-text p{
+  margin:2px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+/* ---------- Layout ---------- */
+.layout{
+  max-width: 1180px;
+  margin: 28px auto;
+  padding: 0 32px 40px;
+  display:grid;
+  grid-template-columns: 340px 1fr;
+  gap: 28px;
+  align-items:start;
+}
+@media (max-width: 860px){
+  .layout{ grid-template-columns: 1fr; }
+}
+
+/* ---------- Control panel ---------- */
+.panel{
+  background: var(--panel);
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  position: sticky;
+  top: 20px;
+}
+.field{ margin-bottom: 16px; }
+.field-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+label{
+  display:block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+.optional{ font-weight:400; color: var(--ink-soft); }
+input[type="text"], input[type="number"], textarea{
+  width:100%;
+  font-family: var(--sans);
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+}
+textarea{ resize: vertical; }
+input:focus, textarea:focus, button:focus-visible{
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+.hint{
+  display:block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 5px;
+}
+
+.segmented{
+  display:flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow:hidden;
+}
+.seg-btn{
+  flex:1;
+  padding: 8px 0;
+  background: #fff;
+  border:none;
+  border-right: 1px solid var(--line);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor:pointer;
+}
+.seg-btn:last-child{ border-right:none; }
+.seg-btn.is-active{
+  background: var(--brass);
+  color: #fff;
+}
+
+.checks{ display:flex; flex-direction:column; gap:8px; }
+.check{
+  display:flex; align-items:center; gap:8px;
+  font-size: 13.5px; font-weight:400;
+  margin:0;
+}
+.check input{ width:auto; margin:0; }
+
+.generate-btn{
+  width:100%;
+  padding: 12px 0;
+  margin-top: 4px;
+  background: var(--ink);
+  color: #fff;
+  border:none;
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor:pointer;
+}
+.generate-btn:hover{ background:#2c3150; }
+
+.panel-footer{
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+}
+.ghost-btn{
+  padding: 9px 0;
+  background: #fff;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-weight:600;
+  font-size: 13.5px;
+  cursor:pointer;
+}
+.ghost-btn:disabled{
+  opacity: 0.4;
+  cursor:not-allowed;
+}
+
+/* ---------- Preview / empty state ---------- */
+.preview-wrap{ min-height: 400px; }
+.empty-state{
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 70px 30px;
+  text-align:center;
+  color: var(--ink-soft);
+}
+.empty-glyph{
+  font-family: var(--serif);
+  font-size: 30px;
+  width:56px; height:56px;
+  border-radius:50%;
+  border:1.5px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  margin: 0 auto 16px;
+}
+.empty-state h2{
+  font-family: var(--serif);
+  font-size: 19px;
+  color: var(--ink);
+  margin: 0 0 6px;
+  font-weight:600;
+}
+.empty-state p{ margin:0; font-size:14px; }
+
+/* ---------- The paper itself ---------- */
+.paper{
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(28,32,51,0.04), 0 8px 24px rgba(28,32,51,0.06);
+  padding: 44px 48px;
+}
+.paper-head{ text-align:center; margin-bottom: 18px; }
+.paper-eyebrow{
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 6px;
+  font-style: italic;
+  font-family: var(--serif);
+}
+.paper-head h2{
+  font-family: var(--serif);
+  font-size: 24px;
+  margin: 0 0 8px;
+  font-weight:700;
+}
+.paper-meta{
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.paper-meta .dot{ margin: 0 8px; color: var(--line); }
+
+.paper-instructions{
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 10px 0;
+  margin-bottom: 26px;
+  font-size: 13.5px;
+}
+
+.paper-section{ margin-bottom: 28px; }
+.paper-section h3{
+  font-family: var(--serif);
+  font-size: 16px;
+  margin: 0 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.section-note{
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+
+.q{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px dotted var(--line);
+  font-size: 14.5px;
+}
+.q:last-child{ border-bottom:none; }
+.q-num{ font-weight:600; margin-right:6px; }
+.q-marks{
+  font-size: 12.5px;
+  font-weight:600;
+  color: var(--brass-dark);
+  white-space: nowrap;
+}
+.q-options{
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.q-options li::before{
+  content: attr(data-letter) ") ";
+  font-weight:600;
+  color: var(--ink);
+}
+
+.answer-key{
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 2px solid var(--stamp);
+}
+.answer-key h3{
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--stamp);
+  margin: 0 0 10px;
+}
+.answer-key ol{ margin:0; padding-left: 20px; font-size: 13.5px; }
+.answer-key li{ margin-bottom: 4px; }
+
+.page-footer{
+  text-align:center;
+  padding: 20px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+/* ---------- Print ---------- */
+@media print{
+  .topbar, .panel, .page-footer, .empty-state{ display:none !important; }
+  body{ background:#fff; }
+  .layout{ display:block; margin:0; padding:0; max-width:none; }
+  .paper{ box-shadow:none; border:none; padding:0; }
+}
+
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">Q</span>
+      <div class="brand-text">
+        <h1>AI Question Paper Generator</h1>
+        <p>Builds a syllabus-matched paper from your topics, marks and difficulty</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- CONTROL PANEL -->
+    <section class="panel" aria-label="Paper settings">
+      <form id="paperForm">
+
+        <div class="field">
+          <label for="subject">Subject / course title</label>
+          <input type="text" id="subject" placeholder="e.g. Data Structures" required>
+        </div>
+
+        <div class="field">
+          <label for="topics">Syllabus topics</label>
+          <textarea id="topics" rows="4" placeholder="One topic per line or comma-separated&#10;e.g. Arrays, Linked Lists, Stacks, Recursion" required></textarea>
+          <span class="hint">Every question is generated from these topics — add as many as your syllabus covers.</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="totalMarks">Total marks</label>
+            <input type="number" id="totalMarks" value="50" min="10" max="200" step="5" required>
+          </div>
+          <div class="field">
+            <label for="duration">Duration</label>
+            <input type="text" id="duration" value="2 Hours" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="difficulty">Difficulty level</label>
+          <div class="segmented" id="difficulty" role="radiogroup" aria-label="Difficulty level">
+            <button type="button" class="seg-btn" data-value="easy">Easy</button>
+            <button type="button" class="seg-btn is-active" data-value="medium">Medium</button>
+            <button type="button" class="seg-btn" data-value="hard">Hard</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Include question types</label>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="typeMCQ" checked> Multiple choice (1 mark)</label>
+            <label class="check"><input type="checkbox" id="typeShort" checked> Short answer (2–3 marks)</label>
+            <label class="check"><input type="checkbox" id="typeLong" checked> Long answer (5–10 marks)</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="seed">Variation seed <span class="optional">(optional)</span></label>
+          <input type="text" id="seed" placeholder="Any word — change it for a fresh shuffle">
+        </div>
+
+        <button type="submit" class="generate-btn">Generate question paper</button>
+      </form>
+
+      <div class="panel-footer">
+        <label class="check"><input type="checkbox" id="showAnswerKey"> Show answer key</label>
+        <button type="button" id="printBtn" class="ghost-btn" disabled>Print / Save as PDF</button>
+      </div>
+    </section>
+
+    <!-- PAPER PREVIEW -->
+    <section class="preview-wrap" aria-label="Generated question paper">
+      <div id="emptyState" class="empty-state">
+        <div class="empty-glyph">?</div>
+        <h2>Your paper will appear here</h2>
+        <p>Fill in the subject, syllabus topics, marks and difficulty, then generate.</p>
+      </div>
+
+      <article id="paper" class="paper" hidden>
+        <header class="paper-head">
+          <p class="paper-eyebrow" id="pInstitution">End Semester Examination</p>
+          <h2 id="pSubject">Subject Title</h2>
+          <div class="paper-meta">
+            <span id="pDuration">Time: 2 Hours</span>
+            <span class="dot">•</span>
+            <span id="pMarks">Maximum Marks: 50</span>
+          </div>
+        </header>
+
+        <div class="paper-instructions">
+          <strong>Instructions:</strong>
+          <span id="pInstructions">Answer all questions. Figures to the right indicate marks.</span>
+        </div>
+
+        <div id="paperBody" class="paper-body"></div>
+
+        <div id="answerKey" class="answer-key" hidden>
+          <h3>Answer key — Multiple choice</h3>
+          <ol id="answerList"></ol>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <footer class="page-footer">
+    <p>Question bank generated on-device from your syllabus input — no data leaves your browser.</p>
+  </footer>
+
+<script>
+/* =========================================================
+   AI Question Paper Generator — generation engine
+   Builds an exam paper from: subject, syllabus topics,
+   total marks, duration and difficulty. Runs entirely
+   client-side using a template + shuffling engine.
+   ========================================================= */
+
+/* ---------- Template banks ---------- */
+
+const VERB_BANKS = {
+  easy:   { short: ["Define", "List", "State", "Name"],
+            long:  ["Explain briefly", "Describe", "Outline", "Give an account of"] },
+  medium: { short: ["Explain", "Describe", "Illustrate", "Summarise"],
+            long:  ["Explain in detail", "Discuss", "Elaborate on", "Compare and contrast"] },
+  hard:   { short: ["Distinguish between", "Justify", "Interpret", "Analyse"],
+            long:  ["Critically analyse", "Evaluate", "Derive and justify", "Design a solution for"] }
+};
+
+const SHORT_SUFFIX = {
+  easy:   ["", "in one or two lines", "with a suitable example"],
+  medium: ["with a suitable example", "with a neat diagram", "briefly"],
+  hard:   ["with justification", "using a real-world scenario", "with supporting reasoning"]
+};
+
+const LONG_SUFFIX = {
+  easy:   ["with an example", "in simple terms", "step by step"],
+  medium: ["with suitable examples", "with a diagram wherever applicable", "highlighting its advantages and limitations"],
+  hard:   ["supporting your answer with a working example", "and justify your approach", "evaluating trade-offs involved"]
+};
+
+const MCQ_STEMS = [
+  "Which of the following is a core topic under \"{subject}\"?",
+  "Which topic listed below falls within the syllabus of \"{subject}\"?",
+  "Identify the topic that belongs to \"{subject}\" from the options below.",
+  "Which of the following is studied as part of \"{subject}\"?"
+];
+
+const MCQ_DISTRACTOR_POOL = [
+  "Renaissance art techniques", "Marine biodiversity", "Macroeconomic indicators",
+  "Constitutional amendments", "Organic chemistry nomenclature", "Digital marketing funnels",
+  "Supply chain logistics", "Classical music theory", "Urban traffic planning",
+  "Ancient Roman architecture", "Behavioural psychology basics", "Agricultural crop rotation"
+];
+
+/* ---------- Small deterministic-ish RNG (seedable) ---------- */
+
+function makeRng(seedText){
+  let h = 0;
+  const s = String(seedText || Date.now());
+  for (let i = 0; i < s.length; i++){
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  let state = h || 123456789;
+  return function(){
+    state ^= state << 13; state |= 0;
+    state ^= state >>> 17;
+    state ^= state << 5; state |= 0;
+    return ((state >>> 0) / 4294967295);
+  };
+}
+
+function shuffle(arr, rng){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pick(arr, rng){ return arr[Math.floor(rng() * arr.length)]; }
+
+/* ---------- Marks distribution ---------- */
+
+function distributeMarks(totalMarks, includeMCQ, includeShort, includeLong){
+  const plan = { mcq: [], short: [], long: [] };
+  let remaining = totalMarks;
+
+  // Reserve a slice of the paper for MCQs (roughly 15-20%, min 5 marks, in 1-mark units)
+  if (includeMCQ){
+    let mcqMarks = Math.max(5, Math.round(totalMarks * 0.18));
+    mcqMarks = Math.min(mcqMarks, Math.floor(remaining * 0.4));
+    for (let m = 0; m < mcqMarks; m++) plan.mcq.push(1);
+    remaining -= mcqMarks;
+  }
+
+  // Split the rest between short (2-3 marks) and long (5-10 marks) answers
+  if (includeShort && includeLong){
+    let shortShare = Math.round(remaining * 0.4);
+    let longShare = remaining - shortShare;
+
+    const shortUnit = shortShare >= 15 ? 3 : 2;
+    while (shortShare >= shortUnit){ plan.short.push(shortUnit); shortShare -= shortUnit; }
+
+    const longUnit = longShare >= 40 ? 10 : 5;
+    while (longShare >= longUnit){ plan.long.push(longUnit); longShare -= longUnit; }
+
+    // fold any leftover into the last long question so totals stay exact
+    let leftover = shortShare + longShare;
+    if (leftover > 0){
+      if (plan.long.length) plan.long[plan.long.length - 1] += leftover;
+      else if (plan.short.length) plan.short[plan.short.length - 1] += leftover;
+      else plan.mcq.push(leftover);
+    }
+  } else if (includeShort){
+    const unit = remaining >= 30 ? 3 : 2;
+    while (remaining >= unit){ plan.short.push(unit); remaining -= unit; }
+    if (remaining > 0){
+      if (plan.short.length) plan.short[plan.short.length - 1] += remaining;
+      else plan.mcq.push(remaining);
+    }
+  } else if (includeLong){
+    const unit = remaining >= 40 ? 10 : 5;
+    while (remaining >= unit){ plan.long.push(unit); remaining -= unit; }
+    if (remaining > 0){
+      if (plan.long.length) plan.long[plan.long.length - 1] += remaining;
+      else plan.mcq.push(remaining);
+    }
+  } else if (includeMCQ){
+    // only MCQs selected: use all remaining marks as 1-mark questions
+    for (let m = 0; m < remaining; m++) plan.mcq.push(1);
+    remaining = 0;
+  }
+
+  return plan;
+}
+
+/* ---------- Question builders ---------- */
+
+function nextTopic(topics, counterRef){
+  const t = topics[counterRef.i % topics.length];
+  counterRef.i++;
+  return t;
+}
+
+function buildMCQ(subject, topics, counter, rng){
+  const correct = nextTopic(topics, counter);
+  const distractors = shuffle(MCQ_DISTRACTOR_POOL.filter(d => d.toLowerCase() !== correct.toLowerCase()), rng).slice(0, 3);
+  const options = shuffle([correct, ...distractors], rng);
+  const correctLetter = "ABCD"[options.indexOf(correct)];
+  const stem = pick(MCQ_STEMS, rng).replace("{subject}", subject);
+  return { type: "mcq", text: stem, options, correctLetter, correctText: correct };
+}
+
+function buildShort(topics, counter, rng, difficulty){
+  const topic = nextTopic(topics, counter);
+  const verb = pick(VERB_BANKS[difficulty].short, rng);
+  const suffix = pick(SHORT_SUFFIX[difficulty], rng);
+  const text = suffix ? `${verb} ${topic} ${suffix}.` : `${verb} ${topic}.`;
+  return { type: "text", text };
+}
+
+function buildLong(topics, counter, rng, difficulty){
+  // occasionally combine two topics for a compare/contrast style question
+  const useTwo = rng() < 0.3 && topics.length > 1;
+  const verb = pick(VERB_BANKS[difficulty].long, rng);
+  const suffix = pick(LONG_SUFFIX[difficulty], rng);
+  let text;
+  if (useTwo){
+    const a = nextTopic(topics, counter);
+    let b = nextTopic(topics, counter);
+    if (b === a) b = nextTopic(topics, counter);
+    text = `${verb} ${a} and ${b}, ${suffix}.`;
+  } else {
+    const topic = nextTopic(topics, counter);
+    text = `${verb} ${topic}, ${suffix}.`;
+  }
+  return { type: "text", text };
+}
+
+/* ---------- Main generation ---------- */
+
+function generatePaper(config){
+  const rng = makeRng(config.seed);
+  const counter = { i: 0 };
+  const shuffledTopics = shuffle(config.topics, rng);
+
+  const plan = distributeMarks(
+    config.totalMarks,
+    config.includeMCQ, config.includeShort, config.includeLong
+  );
+
+  const sections = [];
+
+  if (plan.mcq.length){
+    sections.push({
+      title: `Section A — Multiple Choice Questions`,
+      note: `Answer all ${plan.mcq.length} questions. Each question carries ${plan.mcq[0]} mark.`,
+      questions: plan.mcq.map(marks => ({ ...buildMCQ(config.subject, shuffledTopics, counter, rng), marks }))
+    });
+  }
+  if (plan.short.length){
+    sections.push({
+      title: `Section ${plan.mcq.length ? "B" : "A"} — Short Answer Questions`,
+      note: `Answer any ${plan.short.length} questions.`,
+      questions: plan.short.map(marks => ({ ...buildShort(shuffledTopics, counter, rng, config.difficulty), marks }))
+    });
+  }
+  if (plan.long.length){
+    const letter = plan.mcq.length && plan.short.length ? "C" : (plan.mcq.length || plan.short.length ? "B" : "A");
+    sections.push({
+      title: `Section ${letter} — Long Answer Questions`,
+      note: `Answer any ${plan.long.length} questions.`,
+      questions: plan.long.map(marks => ({ ...buildLong(shuffledTopics, counter, rng, config.difficulty), marks }))
+    });
+  }
+
+  const achievedTotal = sections.reduce((sum, s) => sum + s.questions.reduce((a, q) => a + q.marks, 0), 0);
+
+  return { sections, achievedTotal };
+}
+
+/* ---------- Rendering ---------- */
+
+function renderPaper(config, result){
+  document.getElementById("pInstitution").textContent = "Question Paper";
+  document.getElementById("pSubject").textContent = config.subject;
+  document.getElementById("pDuration").textContent = `Time: ${config.duration}`;
+  document.getElementById("pMarks").textContent = `Maximum Marks: ${result.achievedTotal}`;
+  document.getElementById("pInstructions").textContent =
+    "Answer all questions in Section A. Answers to Sections B and C should be attempted as indicated. Figures in brackets indicate marks.";
+
+  const body = document.getElementById("paperBody");
+  body.innerHTML = "";
+  let qNo = 1;
+  const answerEntries = [];
+
+  result.sections.forEach(section => {
+    const secEl = document.createElement("div");
+    secEl.className = "paper-section";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = section.title;
+    secEl.appendChild(h3);
+
+    const note = document.createElement("p");
+    note.className = "section-note";
+    note.textContent = section.note;
+    secEl.appendChild(note);
+
+    section.questions.forEach(q => {
+      const qEl = document.createElement("div");
+      qEl.className = "q";
+
+      const textEl = document.createElement("div");
+      textEl.innerHTML = `<span class="q-num">${qNo}.</span>${escapeHtml(q.text)}`;
+      qEl.appendChild(textEl);
+
+      const marksEl = document.createElement("div");
+      marksEl.className = "q-marks";
+      marksEl.textContent = `[${q.marks} mark${q.marks > 1 ? "s" : ""}]`;
+      qEl.appendChild(marksEl);
+
+      if (q.type === "mcq"){
+        const ul = document.createElement("ul");
+        ul.className = "q-options";
+        q.options.forEach((opt, idx) => {
+          const li = document.createElement("li");
+          li.setAttribute("data-letter", "ABCD"[idx]);
+          li.textContent = opt;
+          ul.appendChild(li);
+        });
+        qEl.appendChild(ul);
+        answerEntries.push(`Q${qNo}. ${q.correctLetter} — ${q.correctText}`);
+      }
+
+      secEl.appendChild(qEl);
+      qNo++;
+    });
+
+    body.appendChild(secEl);
+  });
+
+  const answerList = document.getElementById("answerList");
+  answerList.innerHTML = "";
+  answerEntries.forEach(entry => {
+    const li = document.createElement("li");
+    li.textContent = entry;
+    answerList.appendChild(li);
+  });
+
+  document.getElementById("emptyState").hidden = true;
+  document.getElementById("paper").hidden = false;
+  document.getElementById("printBtn").disabled = false;
+}
+
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------- UI wiring ---------- */
+
+let selectedDifficulty = "medium";
+
+document.querySelectorAll(".seg-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".seg-btn").forEach(b => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+    selectedDifficulty = btn.dataset.value;
+  });
+});
+
+document.getElementById("showAnswerKey").addEventListener("change", (e) => {
+  document.getElementById("answerKey").hidden = !e.target.checked;
+});
+
+document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+document.getElementById("paperForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const subject = document.getElementById("subject").value.trim() || "Untitled Subject";
+  const rawTopics = document.getElementById("topics").value
+    .split(/[\n,]/)
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  if (rawTopics.length === 0){
+    alert("Please add at least one syllabus topic.");
+    return;
+  }
+
+  const totalMarks = Math.max(10, parseInt(document.getElementById("totalMarks").value, 10) || 50);
+  const duration = document.getElementById("duration").value.trim() || "2 Hours";
+  const seed = document.getElementById("seed").value.trim();
+
+  const includeMCQ = document.getElementById("typeMCQ").checked;
+  const includeShort = document.getElementById("typeShort").checked;
+  const includeLong = document.getElementById("typeLong").checked;
+
+  if (!includeMCQ && !includeShort && !includeLong){
+    alert("Select at least one question type.");
+    return;
+  }
+
+  const config = {
+    subject, topics: rawTopics, totalMarks, duration,
+    difficulty: selectedDifficulty, seed,
+    includeMCQ, includeShort, includeLong
+  };
+
+  const result = generatePaper(config);
+  renderPaper(config, result);
+
+  document.getElementById("paper").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+</script>
+</body>
+</html>
